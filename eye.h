@@ -1,9 +1,7 @@
 #ifndef eye_h
 #define eye_h
 
-
 #include "utilities_package.h"
-
 
 class eye {
 

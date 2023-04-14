@@ -23,6 +23,9 @@
 #include <time.h>
 #include <cmath>
 
+#include <CL/cl.h>
+
+
 using namespace std::chrono;
 
 int image_width;
@@ -34,6 +37,9 @@ int global_x, global_k, global_z;
 int light_x0, light_x1, light_y0, light_y1, light_k;
 
 collision_list world;
+int num_threads = omp_get_max_threads();
+
+
 colour background;
 //colour pixel_colour(0, 0, 0);
 eye camera;
@@ -100,17 +106,6 @@ collision_list preset_scene() {
 
 }
 
-/*
-// base ray trace function
-void base_ray_trace(int i, int j) {
-
-    auto u = (i + random_double()) / (image_width - 1);
-    auto v = (j + random_double()) / (image_height - 1);
-    ray r = camera.get_ray(u, v);
-    pixel_colour += ray_colour(r, background, world, max_depth); 
-
-}
-*/
 
 
 int main(int argc, char** argv) {
@@ -234,6 +229,123 @@ int main(int argc, char** argv) {
         
         // ppm file header
         std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+        
+        //int num_threads = omp_get_max_threads();
+
+        collision_list** world_shared = new collision_list*[num_threads];
+
+        for (int i = 0; i < num_threads; ++i) {
+            world_shared[i] = new collision_list(world);
+        }
+
+        
+
+        for (int j = image_height - 1; j >= 0; --j) {
+
+            std::cerr << "\rLines remaining: " << j << ' ' << std::flush;
+
+            for (int i = 0; i < image_width; ++i) {
+
+                //colour pixel_colour(0, 0, 0);
+                double a = 0, b = 0, c = 0;
+
+                collision_list& world_local = *world_shared[omp_get_thread_num()];
+
+                ray** rays = new ray * [num_threads];
+
+                for (int i = 0; i < num_threads; ++i) {
+                    rays[i] = new ray[image_width];
+                }
+
+                #pragma omp parallel for reduction(+: a, b, c) schedule(dynamic, 4)
+                for (int s = 0; s < samples_per_pixel; ++s) {
+
+                    ray& r = rays[omp_get_thread_num()][i];
+
+                    if (s == 0) {
+                        auto u = (i + random_double()) / (image_width - 1);
+                        auto v = (j + random_double()) / (image_height - 1);
+                        r = camera.get_ray(u, v);
+                    }
+  
+                    colour temp_colour(0, 0, 0);
+                    temp_colour += ray_colour(r, background, world_local , max_depth);
+                    a += temp_colour.x();
+                    b += temp_colour.y();
+                    c += temp_colour.z();
+
+                }
+
+                colour pixel_colour(a, b, c);
+
+                write_colour(std::cout, pixel_colour, samples_per_pixel);
+
+            }
+
+        }
+
+        for (int i = 0; i < num_threads; ++i) {
+            delete world_shared[i];
+        }
+
+        delete[] world_shared;
+
+       /// delete[] rays;
+        //delete[] world_shared;
+
+        /*
+        // ppm file header
+        std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+
+        for (int j = image_height - 1; j >= 0; --j) {
+
+            std::cerr << "\rLines remaining: " << j << ' ' << std::flush;
+
+            for (int i = 0; i < image_width; ++i) {
+
+                double a = 0, b = 0, c = 0;
+
+                //colour pixel_colour(0, 0, 0);
+
+                //#pragma omp parallel for ordered schedule(dynamic, 12) // new_solution_1
+                //#pragma omp parallel for schedule(dynamic, 12) // new_solution_2
+                //#pragma omp parallel for ordered schedule(guided) // new_solution_3
+                //#pragma omp parallel for schedule(guided) // new_solution_4
+                //#pragma omp parallel for num_threads(num_threads) schedule(dynamic)
+                //#pragma omp parallel for schedule(dynamic, 1)
+                #pragma omp parallel for reduction(+: a, b, c) schedule(dynamic, 4)
+                for (int s = 0; s < samples_per_pixel; ++s) {
+
+                    auto u = (i + random_double()) / (image_width - 1);
+                    auto v = (j + random_double()) / (image_height - 1);
+                    ray r = camera.get_ray(u, v);
+                    colour temp_colour(0, 0, 0);
+                    temp_colour += ray_colour(r, background, world, max_depth);
+                    a += temp_colour.x();
+                    b += temp_colour.y();
+                    c += temp_colour.z();
+
+                }
+
+                colour pixel_colour(a, b, c);
+
+                write_colour(std::cout, pixel_colour, samples_per_pixel);
+
+            }
+            
+
+        }
+        */
+
+        /*
+        // ppm file header
+        std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+
+        int num_threads = omp_get_max_threads();
+        collision_list** world_shared = new collision_list * [num_threads];
+        for (int i = 0; i < num_threads; ++i) {
+            world_shared[i] = new collision_list(world);
+        }
 
         for (int j = image_height - 1; j >= 0; --j) {
 
@@ -243,16 +355,15 @@ int main(int argc, char** argv) {
 
                 colour pixel_colour(0, 0, 0);
 
-                #pragma omp parallel for ordered schedule(guided) // 657 seconds
-                //#pragma omp parallel for ordered schedule(dynamic, 12) // 678 seconds
-                //#pragma omp parallel for schedule(dynamic, 12) // 668s for 1024 9586s for 16384
-                //#pragma omp parallel for schedule(guided) //651s for 1024, 9767s for 16384
+                collision_list& world_local = *world_shared[omp_get_thread_num()];
+
+                #pragma omp parallel for schedule(dynamic, 4)
                 for (int s = 0; s < samples_per_pixel; ++s) {
 
                     auto u = (i + random_double()) / (image_width - 1);
                     auto v = (j + random_double()) / (image_height - 1);
                     ray r = camera.get_ray(u, v);
-                    pixel_colour += ray_colour(r, background, world, max_depth);
+                    pixel_colour += ray_colour(r, background, world_local, max_depth);
 
                 }
 
@@ -261,7 +372,15 @@ int main(int argc, char** argv) {
             }
 
         }
-        
+
+        for (int i = 0; i < num_threads; ++i) {
+            delete world_shared[i];
+        }
+
+        delete[] world_shared;
+        */
+
+
 
         /*
         // ppm file header

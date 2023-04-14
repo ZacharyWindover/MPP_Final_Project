@@ -1,6 +1,14 @@
-__kernel void clamp(__global double x, __global double min, __global double max) {
-    double return_value = get_global_id(0);
-    if (x < min) return_value = min;
-    if (x > max) return_value = max;
-    return_value = x;
+__kernel void clamp(__global double* x,  __global double* output, __global double* min, __global double* max) 
+{
+
+    int gid = get_global_id(0);
+
+    if (x[gid] < min[gid]) {
+        output[gid] = min[gid];
+    } else if (x[gid] > max[gid]) {
+        output[gid] = max[gid];
+    } else {
+        output[gid] = x[gid];
+    }
+
 }

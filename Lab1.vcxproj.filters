@@ -58,6 +58,12 @@
     <ClInclude Include="plane_rects.h">
       <Filter>ray_trace</Filter>
     </ClInclude>
+    <ClInclude Include="degrees_to_radians_host.h">
+      <Filter>ray_trace</Filter>
+    </ClInclude>
+    <ClInclude Include="clamp_host.h">
+      <Filter>ray_trace</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ray_trace">
@@ -66,9 +72,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
-      <Filter>ray_trace</Filter>
-    </ClCompile>
-    <ClCompile Include="open.cpp">
       <Filter>ray_trace</Filter>
     </ClCompile>
   </ItemGroup>

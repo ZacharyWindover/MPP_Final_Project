@@ -6,28 +6,36 @@
 #include <limits>
 #include <memory>
 
+#include <CL/cl.h>
 
-// Usings
+#include "clamp_host.h"
+#include "degrees_to_radians_host.h"
 
+// Using
 using std::shared_ptr;
 using std::make_shared;
 using std::sqrt;
 
 // Constants
-
 const double infinity = std::numeric_limits<double>::infinity();
 const double pi = 3.1415926535897932385;
 
 // Utility Functions
 
+// put this function into an opencl kernel
 inline double degrees_to_radians(double degrees) {
-    return degrees * pi / 180.0;
+    //return degrees * m_pi / 180.0;
+    double radians = degrees_to_radians_host(degrees);
+    return radians;
 }
 
+// put this function into an opencl kernel
 inline double clamp(double x, double min, double max) {
-    if (x < min) return min;
-    if (x > max) return max;
-    return x;
+    //if (x < min) return min;
+    //if (x > max) return max;
+    //return x;
+    double clamp_value = clamp_host(x, min, max);
+    return clamp_value;
 }
 
 inline double random_double() {
