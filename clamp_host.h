@@ -14,15 +14,15 @@ double clamp_host(double x, double min, double max) {
     cl_mem input_buffer_x, output_buffer, input_buffer_min, input_buffer_max;
     cl_int err;
 
-    // Get the first available platform and device
+    // Get first available platform and device
     err = clGetPlatformIDs(1, &platform, NULL);
     err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
 
-    // Create a context and command queue
+    // Create context and command queue
     context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
     queue = clCreateCommandQueue(context, device, 0, &err);
 
-    // convert data to vectors
+    // Convert data to vectors
     std::vector<double> x_vector = { x };
     std::vector<double> output_vector = { 0.0 };
     std::vector<double> min_vector = { min };
@@ -34,7 +34,7 @@ double clamp_host(double x, double min, double max) {
     input_buffer_max = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(double) * max_vector.size(), max_vector.data(), &err);
     output_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(double) * output_vector.size(), NULL, &err);
 
-    // Create the kernel program
+    // Create kernel program
     const char* source = "__kernel void clamp(__global double* x,  __global double* output, __global double* min, __global double* max) {\n"
         "    int gid = get_global_id(0);\n"
         "    if (x[gid] < min[gid]) {\n"
@@ -49,7 +49,7 @@ double clamp_host(double x, double min, double max) {
     program = clCreateProgramWithSource(context, 1, &source, &source_size, &err);
     err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
 
-    // Create the kernel
+    // Create kernel
     kernel = clCreateKernel(program, "clamp", &err);
 
     // Set kernel arguments
@@ -58,7 +58,7 @@ double clamp_host(double x, double min, double max) {
     err = clSetKernelArg(kernel, 2, sizeof(cl_mem), &input_buffer_min);
     err = clSetKernelArg(kernel, 3, sizeof(cl_mem), &input_buffer_max);
 
-    // Execute the kernel
+    // Execute kernel
     size_t global_size = 1;
     size_t local_size = 1;
 
